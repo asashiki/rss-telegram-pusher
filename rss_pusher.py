@@ -1,8 +1,12 @@
-import feedparser
-import logging
 import asyncio
+import html
 import json
+import logging
 import os
+import re
+import time
+
+import feedparser
 from telegram import Bot
 from telegram.error import TelegramError
 
@@ -51,17 +55,55 @@ def fetch_updates():
         return None
 
 def escape_markdown(text):
-    special_chars = r"_*~`>#+-.!()"
+    special_chars = r"\_*[]()~`>#+-=|{}.!"
     for char in special_chars:
-        text = text.replace(char, f"\{char}")
+        text = text.replace(char, f"\\{char}")
     return text
 
-async def send_message(bot, title, link, delay=3):
+
+def extract_post_id(entry):
+    id_fields = ["id", "guid", "link"]
+    for field in id_fields:
+        value = getattr(entry, field, None)
+        if value:
+            candidate = value.strip()
+            break
+    else:
+        return None
+
+    match = re.search(r"(\d+)(?!.*\d)", candidate)
+    if match:
+        return match.group(1)
+    return candidate
+
+
+def extract_description(entry):
+    raw_description = getattr(entry, "description", None) or getattr(entry, "summary", None) or ""
+    fallback = getattr(entry, "title", None) or getattr(entry, "link", None) or ""
+    if raw_description:
+        cleaned = raw_description.strip()
+        if cleaned.startswith("<![CDATA[") and cleaned.endswith("]]>"):
+            cleaned = cleaned[9:-3]
+        cleaned = html.unescape(cleaned)
+        cleaned = re.sub(r"<[^>]+>", "", cleaned)
+        cleaned = cleaned.replace("\r", "").strip()
+        if cleaned:
+            return cleaned
+    return fallback.strip()
+
+
+def get_entry_timestamp(entry):
+    time_struct = getattr(entry, "published_parsed", None) or getattr(entry, "updated_parsed", None)
+    if time_struct:
+        return time.mktime(time_struct)
+    return 0
+
+
+async def send_message(bot, text, delay=3):
     try:
         await asyncio.sleep(delay)  # 发送间隔
-        escaped_title = escape_markdown(title)
-        escaped_link = escape_markdown(link)
-        message = f"`{escaped_title}`\n{escaped_link}"
+        escaped_text = escape_markdown(text)
+        message = f"主人{escaped_text}"
         logging.info(f"发送消息：{message[:100]}")
         await bot.send_message(
             chat_id=CHAT_ID,
@@ -82,34 +124,38 @@ async def check_for_updates(sent_post_ids):
     new_posts = []
     for entry in updates.entries:
         try:
-            # 提取ID（适配URL格式）
-            guid_parts = entry.guid.split("-")
-            if len(guid_parts) < 2:
-                logging.warning(f"无效GUID格式：{entry.guid}，跳过")
+            post_id = extract_post_id(entry)
+            if not post_id:
+                logging.warning("无效条目，无法获取ID，跳过")
                 continue
-            post_id = guid_parts[-1].split(".")[0]
-            if not post_id.isdigit():
-                logging.warning(f"提取的ID非数字：{post_id}，跳过")
+            post_id = str(post_id)
+            if post_id in sent_post_ids:
                 continue
-            logging.info(f"解析到有效ID：{post_id}，标题：{entry.title[:20]}...")
-            if post_id not in sent_post_ids:
-                new_posts.append((post_id, entry.title, entry.link))
+
+            description = extract_description(entry)
+            timestamp = get_entry_timestamp(entry)
+            logging.info(f"解析到新条目 ID：{post_id}，内容长度：{len(description)}")
+            new_posts.append({
+                "id": post_id,
+                "text": description,
+                "timestamp": timestamp
+            })
         except Exception as e:
-            logging.error(f"解析条目失败（GUID：{entry.guid}）：{str(e)}")
+            logging.error(f"解析条目失败：{str(e)}")
             continue
 
     if new_posts:
-        # 按ID升序排序（旧→新），取前5条
-        new_posts.sort(key=lambda x: int(x[0]))
+        # 按发布时间排序（旧→新），取前5条
+        new_posts.sort(key=lambda x: (x["timestamp"], x["id"]))
         new_posts = new_posts[:MAX_PUSH_PER_RUN]  # 限制单次最多5条
-        logging.info(f"发现{len(new_posts)}条新帖子（单次最多推{MAX_PUSH_PER_RUN}条），准备依次推送（间隔3秒）")
+        logging.info(f"发现{len(new_posts)}条新信息（单次最多推{MAX_PUSH_PER_RUN}条），准备依次推送（间隔3秒）")
 
         async with Bot(token=TELEGRAM_TOKEN) as bot:
-            for i, (post_id, title, link) in enumerate(new_posts):
+            for i, post in enumerate(new_posts):
                 # 第一条立即发送，后续每条间隔3秒
-                success = await send_message(bot, title, link, delay=3 if i > 0 else 0)
+                success = await send_message(bot, post["text"], delay=3 if i > 0 else 0)
                 if success:
-                    sent_post_ids.append(post_id)  # 仅记录成功发送的ID
+                    sent_post_ids.append(post["id"])  # 仅记录成功发送的ID
 
         save_sent_posts(sent_post_ids)
     else:

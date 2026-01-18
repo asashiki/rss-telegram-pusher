@@ -43,9 +43,20 @@
    - 若收到消息，说明配置成功；  
    - 若未收到，可在 Actions 页面进入对应工作流的运行记录，查看报错信息排查问题。
 
+## 四、Bangumi 时间胶囊示例
+
+以用户 asashiki 为例，如果要把 Bangumi 的时间胶囊内容同步到 Telegram，可按下列方式设置：
+
+1. 将 `RSS_URL` 设置为 `https://bangumi.tv/feed/user/<你的 ID>/timeline`，例如 `https://bangumi.tv/feed/user/asashiki/timeline`。
+2. 当前脚本会自动读取每条 RSS 项目的 `<description>` 内容，去除 HTML 标签并做 `MarkdownV2` 转义，然后在文本最前面拼接 `主人` 再推送到 Telegram。
+3. Bangumi 的 GUID/链接会直接作为帖子唯一 ID，不再需要 `thread-xxx.htm` 之类的过滤逻辑，重复运行也不会再次推送相同记录。
+
+完成配置后，Telegram 群组中会出现类似 `主人听过 XXX` 的文字，内容即为时间胶囊里的描述文本。
+
 
 ## 注意事项
-- 本脚本默认适配 [大佬论坛（www.dalao.net）][3] 的帖子 URL 结构（/thread-[tid].htm），相同结构的网站可以直接使用，其他网站可能需要调整代码中的 URL 解析逻辑才能正常运行。
+- 当前默认只推送 `<description>` 中的文字，如果希望保留 HTML 超链接，可按需修改 `rss_pusher.py` 中的 `extract_description`。
+- 仍可用于 [大佬论坛（www.dalao.net）][3] 的帖子结构（/thread-[tid].htm），若目标站点采用不同的 GUID 规则，可以调整 `extract_post_id` 以获得稳定的唯一 ID。
 
 
 [2]: https://github.com/settings/tokens
