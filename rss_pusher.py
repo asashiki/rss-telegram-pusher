@@ -54,12 +54,6 @@ def fetch_updates():
         logging.error(f"获取RSS失败：{str(e)}")
         return None
 
-def escape_markdown(text):
-    special_chars = r"\_*[]()~`>#+-=|{}.!"
-    for char in special_chars:
-        text = text.replace(char, f"\\{char}")
-    return text
-
 
 def extract_post_id(entry):
     id_fields = ["id", "guid", "link"]
@@ -99,16 +93,20 @@ def get_entry_timestamp(entry):
     return 0
 
 
-async def send_message(bot, text, delay=3):
+async def send_message(bot, text, link=None, delay=3):
     try:
         await asyncio.sleep(delay)  # 发送间隔
-        escaped_text = escape_markdown(text)
-        message = f"主人{escaped_text}"
+        escaped_text = html.escape(text)
+        if link:
+            escaped_link = html.escape(link, quote=True)
+            message = f'主人<a href="{escaped_link}">{escaped_text}</a>'
+        else:
+            message = f"主人{escaped_text}"
         logging.info(f"发送消息：{message[:100]}")
         await bot.send_message(
             chat_id=CHAT_ID,
             text=message,
-            parse_mode="MarkdownV2"
+            parse_mode="HTML"
         )
         logging.info("消息发送成功")
         return True
@@ -133,11 +131,13 @@ async def check_for_updates(sent_post_ids):
                 continue
 
             description = extract_description(entry)
+            link = getattr(entry, "link", None)
             timestamp = get_entry_timestamp(entry)
             logging.info(f"解析到新条目 ID：{post_id}，内容长度：{len(description)}")
             new_posts.append({
                 "id": post_id,
                 "text": description,
+                "link": link,
                 "timestamp": timestamp
             })
         except Exception as e:
@@ -153,7 +153,7 @@ async def check_for_updates(sent_post_ids):
         async with Bot(token=TELEGRAM_TOKEN) as bot:
             for i, post in enumerate(new_posts):
                 # 第一条立即发送，后续每条间隔3秒
-                success = await send_message(bot, post["text"], delay=3 if i > 0 else 0)
+                success = await send_message(bot, post["text"], link=post.get("link"), delay=3 if i > 0 else 0)
                 if success:
                     sent_post_ids.append(post["id"])  # 仅记录成功发送的ID
 
