@@ -93,6 +93,22 @@ def get_entry_timestamp(entry):
     return 0
 
 
+def extract_entry_link(entry):
+    """Return the most specific URL for an RSS entry.
+
+    For feeds like bangumi.tv, entry.link may point to a generic timeline page
+    while entry.id (mapped from <guid> in RSS or <id> in Atom) contains the
+    direct URL to the specific item (e.g. https://bgm.tv/subject/ep/1551970).
+    Prefer entry.id when it looks like a URL; fall back to entry.link.
+    """
+    entry_id = getattr(entry, "id", None)
+    if entry_id:
+        entry_id = entry_id.strip()
+        if entry_id.startswith("http://") or entry_id.startswith("https://"):
+            return entry_id
+    return getattr(entry, "link", None)
+
+
 async def send_message(bot, text, link=None, delay=3):
     try:
         await asyncio.sleep(delay)  # 发送间隔
@@ -131,7 +147,7 @@ async def check_for_updates(sent_post_ids):
                 continue
 
             description = extract_description(entry)
-            link = getattr(entry, "link", None)
+            link = extract_entry_link(entry)
             timestamp = get_entry_timestamp(entry)
             logging.info(f"解析到新条目 ID：{post_id}，内容长度：{len(description)}")
             new_posts.append({
