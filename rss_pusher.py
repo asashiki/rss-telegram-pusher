@@ -21,6 +21,9 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+URL_REGEX = re.compile(r"https?://[^"]+'<>]+")
+HREF_REGEX = re.compile(r"href=[\"']([^\"']+)")
+
 def load_sent_posts():
     try:
         if os.path.exists(POSTS_FILE):
@@ -93,20 +96,83 @@ def get_entry_timestamp(entry):
     return 0
 
 
+def _extract_urls_from_text(text):
+    if not text:
+        return []
+    text = html.unescape(text)
+    urls = []
+    urls.extend(HREF_REGEX.findall(text))
+    urls.extend(URL_REGEX.findall(text))
+    return urls
+
+
+def _score_entry_url(url):
+    lower = url.lower()
+    score = 0
+    if any(domain in lower for domain in ("bangumi.tv", "bgm.tv", "chii.in")):
+        score += 5
+    if re.search(r"/(subject|ep|character|person|blog|group|rakuen|index|item)/\d+", lower):
+        score += 60
+    if re.search(r"/subject/\d+", lower):
+        score += 60
+    if re.search(r"/ep/\d+", lower):
+        score += 60
+    if re.search(r"/user/[^/]+/timeline", lower):
+        score -= 100
+    if re.search(r"/user/[^/]+/?$", lower):
+        score -= 20
+    return score
+
+
 def extract_entry_link(entry):
     """Return the most specific URL for an RSS entry.
 
-    For feeds like bangumi.tv, entry.link may point to a generic timeline page
-    while entry.id (mapped from <guid> in RSS or <id> in Atom) contains the
-    direct URL to the specific item (e.g. https://bgm.tv/subject/ep/1551970).
-    Prefer entry.id when it looks like a URL; fall back to entry.link.
+    Prefer URLs pointing to subject/episode/etc. instead of generic timeline pages.
+    Tries entry.id/guid/link first, then scans entry content/summary for hrefs.
     """
-    entry_id = getattr(entry, "id", None)
-    if entry_id:
-        entry_id = entry_id.strip()
-        if entry_id.startswith("http://") or entry_id.startswith("https://"):
-            return entry_id
-    return getattr(entry, "link", None)
+    candidates = []
+
+    def add_candidate(url):
+        if not url:
+            return
+        url = url.strip()
+        if not url:
+            return
+        if url.startswith("//"):
+            url = f"https:{url}"
+        if url not in candidates:
+            candidates.append(url)
+
+    for field in ("id", "guid", "link"):
+        value = getattr(entry, field, None)
+        if value:
+            add_candidate(value)
+
+    for link_info in getattr(entry, "links", []) or []:
+        if isinstance(link_info, dict):
+            add_candidate(link_info.get("href") or link_info.get("url"))
+
+    for content_info in getattr(entry, "content", []) or []:
+        if isinstance(content_info, dict):
+            for url in _extract_urls_from_text(content_info.get("value") or ""):
+                add_candidate(url)
+
+    for text in (
+        getattr(entry, "summary", None),
+        getattr(entry, "description", None),
+        getattr(entry, "title", None),
+    ):
+        for url in _extract_urls_from_text(text or ""):
+            add_candidate(url)
+
+    candidates = [url for url in candidates if url.startswith("http://") or url.startswith("https://")]
+    if not candidates:
+        return getattr(entry, "link", None)
+
+    best = max(candidates, key=_score_entry_url)
+    if _score_entry_url(best) < 0:
+        return getattr(entry, "link", None)
+    return best
 
 
 async def send_message(bot, text, link=None, delay=3):
@@ -129,6 +195,7 @@ async def send_message(bot, text, link=None, delay=3):
     except TelegramError as e:
         logging.error(f"Telegram发送失败：{str(e)}")
         return False
+
 
 async def check_for_updates(sent_post_ids):
     updates = fetch_updates()
@@ -177,6 +244,7 @@ async def check_for_updates(sent_post_ids):
     else:
         logging.info("无新帖子需要推送")
 
+
 async def main():
     logging.info("===== 脚本开始运行 =====")
     sent_post_ids = load_sent_posts()
@@ -185,6 +253,7 @@ async def main():
     except Exception as e:
         logging.error(f"主逻辑执行失败：{str(e)}")
     logging.info("===== 脚本运行结束 =====")
+
 
 if __name__ == "__main__":
     asyncio.run(main())
