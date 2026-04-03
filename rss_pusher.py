@@ -21,8 +21,9 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-URL_REGEX = re.compile(r"https?://[^"]+'<>]+")
-HREF_REGEX = re.compile(r"href=[\"']([^\"']+)")
+URL_REGEX = re.compile(r"https?://[^
+\s"'<>]+")
+HREF_REGEX = re.compile(r"href=["']([^"']+)")
 
 def load_sent_posts():
     try:
@@ -57,7 +58,6 @@ def fetch_updates():
         logging.error(f"获取RSS失败：{str(e)}")
         return None
 
-
 def extract_post_id(entry):
     id_fields = ["id", "guid", "link"]
     for field in id_fields:
@@ -73,7 +73,6 @@ def extract_post_id(entry):
         return match.group(1)
     return candidate
 
-
 def extract_description(entry):
     raw_description = getattr(entry, "description", None) or getattr(entry, "summary", None) or ""
     fallback = getattr(entry, "title", None) or getattr(entry, "link", None) or ""
@@ -88,13 +87,11 @@ def extract_description(entry):
             return cleaned
     return fallback.strip()
 
-
 def get_entry_timestamp(entry):
     time_struct = getattr(entry, "published_parsed", None) or getattr(entry, "updated_parsed", None)
     if time_struct:
         return time.mktime(time_struct)
     return 0
-
 
 def _extract_urls_from_text(text):
     if not text:
@@ -104,7 +101,6 @@ def _extract_urls_from_text(text):
     urls.extend(HREF_REGEX.findall(text))
     urls.extend(URL_REGEX.findall(text))
     return urls
-
 
 def _score_entry_url(url):
     lower = url.lower()
@@ -122,7 +118,6 @@ def _score_entry_url(url):
     if re.search(r"/user/[^/]+/?$", lower):
         score -= 20
     return score
-
 
 def extract_entry_link(entry):
     """Return the most specific URL for an RSS entry.
@@ -174,7 +169,6 @@ def extract_entry_link(entry):
         return getattr(entry, "link", None)
     return best
 
-
 async def send_message(bot, text, link=None, delay=3):
     try:
         await asyncio.sleep(delay)  # 发送间隔
@@ -195,7 +189,6 @@ async def send_message(bot, text, link=None, delay=3):
     except TelegramError as e:
         logging.error(f"Telegram发送失败：{str(e)}")
         return False
-
 
 async def check_for_updates(sent_post_ids):
     updates = fetch_updates()
@@ -229,7 +222,7 @@ async def check_for_updates(sent_post_ids):
 
     if new_posts:
         # 按发布时间排序（旧→新），取前5条
-        new_posts.sort(key=lambda x: (x["timestamp"], x["id"]))
+        new_posts.sort(key=lambda x: (x["timestamp"], x["id" ]))
         new_posts = new_posts[:MAX_PUSH_PER_RUN]  # 限制单次最多5条
         logging.info(f"发现{len(new_posts)}条新信息（单次最多推{MAX_PUSH_PER_RUN}条），准备依次推送（间隔3秒）")
 
@@ -244,7 +237,6 @@ async def check_for_updates(sent_post_ids):
     else:
         logging.info("无新帖子需要推送")
 
-
 async def main():
     logging.info("===== 脚本开始运行 =====")
     sent_post_ids = load_sent_posts()
@@ -253,7 +245,6 @@ async def main():
     except Exception as e:
         logging.error(f"主逻辑执行失败：{str(e)}")
     logging.info("===== 脚本运行结束 =====")
-
 
 if __name__ == "__main__":
     asyncio.run(main())
