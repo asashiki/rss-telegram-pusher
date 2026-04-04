@@ -21,8 +21,8 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-URL_REGEX = re.compile(r"https?://[^\s<>'\"]+")
-HREF_REGEX = re.compile(r"href=[\"']([^\"']+)")
+URL_REGEX = re.compile(r"""https?://[^\s<>"']+""")
+HREF_REGEX = re.compile(r"""href=["']([^"']+)""")
 
 def load_sent_posts():
     try:
@@ -107,10 +107,6 @@ def _score_entry_url(url):
     if any(domain in lower for domain in ("bangumi.tv", "bgm.tv", "chii.in")):
         score += 5
     if re.search(r"/(subject|ep|character|person|blog|group|rakuen|index|item)/\d+", lower):
-        score += 60
-    if re.search(r"/subject/\d+", lower):
-        score += 60
-    if re.search(r"/ep/\d+", lower):
         score += 60
     if re.search(r"/user/[^/]+/timeline", lower):
         score -= 100
