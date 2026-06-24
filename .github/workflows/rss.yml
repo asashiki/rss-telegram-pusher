@@ -15,10 +15,6 @@ on:
 
   workflow_dispatch:  # 允许手动触发
 
-concurrency:
-  group: rss-to-telegram-main
-  cancel-in-progress: false
-
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -51,27 +47,10 @@ jobs:
         run: python rss_pusher.py
 
       - name: 提交更新后的ID文件
-        run: |
-          set -euo pipefail
-
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-
-          git add sent_posts.json rss_state.json
-          if git diff --cached --quiet; then
-            echo "没有状态文件需要提交"
-            exit 0
-          fi
-
-          git commit -m "更新已发送的帖子ID"
-
-          for attempt in 1 2 3; do
-            if git push origin HEAD:main; then
-              exit 0
-            fi
-            echo "push 失败，尝试同步远端后重试: ${attempt}/3"
-            git pull --rebase origin main
-          done
-
-          echo "状态文件提交失败"
-          exit 1
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "更新已发送的帖子ID"
+          file_pattern: "sent_posts.json rss_state.json"
+          branch: main
+          commit_user_name: "GitHub Actions"
+          commit_user_email: "actions@github.com"
