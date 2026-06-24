@@ -15,6 +15,10 @@ on:
 
   workflow_dispatch:  # 允许手动触发
 
+concurrency:
+  group: rss-to-telegram-main
+  cancel-in-progress: false
+
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -47,10 +51,41 @@ jobs:
         run: python rss_pusher.py
 
       - name: 提交更新后的ID文件
-        uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: "更新已发送的帖子ID"
-          file_pattern: "sent_posts.json rss_state.json"
-          branch: main
-          commit_user_name: "GitHub Actions"
-          commit_user_email: "actions@github.com"
+        run: |
+          set -euo pipefail
+
+          cp sent_posts.json /tmp/local_sent_posts.json
+          cp rss_state.json /tmp/local_rss_state.json
+
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+
+            python scripts/merge_state.py \
+              sent_posts.json \
+              /tmp/local_sent_posts.json \
+              sent_posts.json \
+              rss_state.json \
+              /tmp/local_rss_state.json
+
+            git add sent_posts.json rss_state.json
+            if git diff --cached --quiet; then
+              echo "没有状态文件需要提交"
+              exit 0
+            fi
+
+            git commit -m "更新已发送的帖子ID"
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+
+            echo "push 失败，重新合并远端状态后重试: ${attempt}/3"
+            cp sent_posts.json /tmp/local_sent_posts.json
+            cp rss_state.json /tmp/local_rss_state.json
+          done
+
+          echo "状态文件提交失败"
+          exit 1
