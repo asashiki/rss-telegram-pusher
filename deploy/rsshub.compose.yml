@@ -10,4 +10,4 @@ services:
     environment:
       NODE_ENV: production
       CACHE_TYPE: memory
-      CACHE_EXPIRE: 1800
+      CACHE_EXPIRE: 300

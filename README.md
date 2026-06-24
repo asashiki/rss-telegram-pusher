@@ -35,7 +35,7 @@
   {
     "name": "x",
     "url": "https://rsshub.asashiki.com/twitter/user/asashiki_/includeReplies=0&includeRts=1&readable=1&addLinkForPics=1&showTimestampInDescription=1&heightOfPics=180?key=YOUR_ACCESS_KEY",
-    "interval_minutes": 30,
+    "interval_minutes": 5,
     "prefix": "主人发推了："
   }
 ]
@@ -57,7 +57,7 @@ x=https://rsshub.asashiki.com/twitter/user/asashiki_/includeReplies=0&includeRts
   {
     "name": "x",
     "url": "https://rsshub.asashiki.com/twitter/user/asashiki_/includeReplies=0&includeRts=1&readable=1&addLinkForPics=1&showTimestampInDescription=1&heightOfPics=180?key=YOUR_ACCESS_KEY",
-    "interval_minutes": 30,
+    "interval_minutes": 5,
     "prefix": "主人发推了："
   }
 ]

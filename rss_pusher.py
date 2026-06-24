@@ -473,10 +473,14 @@ async def check_for_updates(sent_post_ids):
             continue
 
         updates = fetch_updates(feed_config)
-        state.setdefault(feed_config["name"], {})["last_checked_at"] = int(now)
-        state_changed = True
         if not updates:
             continue
+        if not updates.entries:
+            logging.warning(f"RSS源[{feed_config['name']}] 没有返回条目，不更新检查时间")
+            continue
+
+        state.setdefault(feed_config["name"], {})["last_checked_at"] = int(now)
+        state_changed = True
 
         for entry in updates.entries:
             try:
