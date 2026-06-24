@@ -5,7 +5,6 @@ import logging
 import os
 import re
 import time
-from datetime import datetime
 from urllib.parse import urlparse
 
 import feedparser
@@ -47,12 +46,6 @@ URL_REGEX = re.compile(r"""https?://[^\s<>"']+""")
 HREF_REGEX = re.compile(r"""href=["']([^"']+)""")
 IMG_SRC_REGEX = re.compile(r"""<img[^>]+src=["']([^"']+)["']""", re.IGNORECASE)
 IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".gif")
-RSSHUB_TIMESTAMP_REGEX = re.compile(
-    r"\s*(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) "
-    r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) "
-    r"\d{1,2} \d{4} \d{2}:\d{2}:\d{2} GMT[+-]\d{4}"
-    r"(?: \([^)]+\))?\s*$"
-)
 
 def _parse_feed_config_value(value, default_name_prefix="feed"):
     configs = []
@@ -226,7 +219,6 @@ def extract_description(entry):
         cleaned = html.unescape(cleaned)
         cleaned = re.sub(r"<[^>]+>", "", cleaned)
         cleaned = cleaned.replace("\r", "").strip()
-        cleaned = RSSHUB_TIMESTAMP_REGEX.sub("", cleaned).strip()
         if cleaned:
             return cleaned
     return fallback.strip()
@@ -370,31 +362,20 @@ def extract_entry_link(entry):
         return getattr(entry, "link", None)
     return best
 
-def format_timestamp(timestamp):
-    if not timestamp:
-        return None
-    try:
-        return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M")
-    except (OverflowError, OSError, TypeError, ValueError):
-        return None
-
-def build_telegram_html(text, link=None, limit=TELEGRAM_MESSAGE_LIMIT, prefix=None, timestamp=None):
+def build_telegram_html(text, link=None, limit=TELEGRAM_MESSAGE_LIMIT, prefix=None):
     raw_text = str(text or "").strip()
     if not raw_text:
-        raw_text = "查看原文" if link else ""
+        raw_text = str(link or "").strip()
     prefix = MESSAGE_PREFIX if prefix is None else prefix
-    footer_text = format_timestamp(timestamp) or ("查看原文" if link else "")
 
     suffix = ""
     while True:
-        body = f"{prefix}{raw_text}{suffix}"
-        escaped_body = html.escape(body)
-        if link and footer_text:
+        escaped_text = html.escape(raw_text + suffix)
+        if link:
             escaped_link = html.escape(link, quote=True)
-            escaped_footer = html.escape(footer_text)
-            message = f'{escaped_body}\n<a href="{escaped_link}">{escaped_footer}</a>'
+            message = f'{prefix}<a href="{escaped_link}">{escaped_text}</a>'
         else:
-            message = escaped_body
+            message = f"{prefix}{escaped_text}"
 
         if len(message) <= limit:
             return message
@@ -407,10 +388,10 @@ def build_telegram_html(text, link=None, limit=TELEGRAM_MESSAGE_LIMIT, prefix=No
         trim_by = max(1, overflow)
         raw_text = raw_text[:-trim_by]
 
-async def send_message(bot, text, link=None, delay=3, prefix=None, timestamp=None):
+async def send_message(bot, text, link=None, delay=3, prefix=None):
     try:
         await asyncio.sleep(delay)  # 发送间隔
-        message = build_telegram_html(text, link=link, prefix=prefix, timestamp=timestamp)
+        message = build_telegram_html(text, link=link, prefix=prefix)
         logging.info(f"发送消息：{message[:100]}")
         await bot.send_message(
             chat_id=CHAT_ID,
@@ -428,12 +409,11 @@ async def send_post(bot, post, delay=3):
     link = post.get("link")
     images = post.get("images") or []
     prefix = post.get("prefix")
-    timestamp = post.get("timestamp")
 
     if not SEND_IMAGES or not images:
-        return await send_message(bot, text, link=link, delay=delay, prefix=prefix, timestamp=timestamp)
+        return await send_message(bot, text, link=link, delay=delay, prefix=prefix)
 
-    caption = build_telegram_html(text, link=link, limit=TELEGRAM_CAPTION_LIMIT, prefix=prefix, timestamp=timestamp)
+    caption = build_telegram_html(text, link=link, limit=TELEGRAM_CAPTION_LIMIT, prefix=prefix)
 
     try:
         await asyncio.sleep(delay)
@@ -452,7 +432,7 @@ async def send_post(bot, post, delay=3):
         return True
     except TelegramError as e:
         logging.error(f"Telegram图片发送失败，回退为文本：{str(e)}")
-        return await send_message(bot, text, link=link, delay=0, prefix=prefix, timestamp=timestamp)
+        return await send_message(bot, text, link=link, delay=0, prefix=prefix)
 
 async def check_for_updates(sent_post_ids):
     feed_configs = parse_feed_configs()
