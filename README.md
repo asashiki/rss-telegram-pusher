@@ -1,6 +1,17 @@
+<div align="center">
+
+<img src="https://cdn.jsdelivr.net/gh/asashiki/asashiki-design@main/assets/brand/asashiki-mark-color-t.png" alt="Asashiki" width="84" />
+
 # RSS 到 Telegram 推送工具
 
-这个仓库通过 GitHub Actions 定时读取一个或多个 RSS 源，并把新条目推送到 Telegram 频道或群组。
+通过 GitHub Actions 定时读取一个或多个 RSS 源，把新条目推送到 Telegram 频道或群组。
+
+![Runs on](https://img.shields.io/badge/Runs_on-GitHub_Actions-6b6570?style=flat-square&labelColor=221f26)
+![Delivers to](https://img.shields.io/badge/Delivers_to-Telegram-6b6570?style=flat-square&labelColor=221f26)
+![Python](https://img.shields.io/badge/Python-3.x-6b6570?style=flat-square&labelColor=221f26)
+[![Part of Asashiki](https://img.shields.io/badge/Part_of-Asashiki-e85d97?style=flat-square&labelColor=221f26)](https://github.com/asashiki)
+
+</div>
 
 ## 功能
 
@@ -115,3 +126,9 @@ curl "http://127.0.0.1:1200/twitter/user/asashiki_/includeReplies=0&includeRts=1
 ```
 
 如果 GitHub Actions 要访问这个 RSSHub，需要用 Caddy 或 Nginx 反代到 HTTPS 域名，再把完整 RSS 地址填入 `RSS_URLS`。
+
+---
+
+<div align="center">
+<sub>Asashiki 项目集的一员 · 视觉语言见 <a href="https://github.com/asashiki/asashiki-design">Asashiki Design</a> · 墨と桜。</sub>
+</div>
