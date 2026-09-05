@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-labelledby="title desc">
+  <title id="title">RSS 到 Telegram 推送流程</title>
+  <desc id="desc">多个 RSS 源由 GitHub Actions 定时读取、去重并推送到 Telegram。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffafc"/><stop offset="1" stop-color="#f0f5fb"/></linearGradient>
+    <linearGradient id="action" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e85d97"/><stop offset="1" stop-color="#6d70ca"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="9" flood-color="#302a38" flood-opacity=".12"/></filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#918998"/></marker>
+  </defs>
+  <rect width="1200" height="300" rx="26" fill="url(#bg)"/>
+  <text x="600" y="55" text-anchor="middle" font-family="Inter,Segoe UI,'PingFang SC',sans-serif" font-size="25" font-weight="700" fill="#302a38">订阅一次，后面的推送交给 GitHub Actions</text>
+  <g font-family="Inter,Segoe UI,'PingFang SC',sans-serif" filter="url(#shadow)">
+    <rect x="62" y="102" width="260" height="110" rx="21" fill="#fff" stroke="#e2dfe6"/>
+    <text x="92" y="138" font-size="13" font-weight="700" fill="#9b4f72">RSS 源</text>
+    <text x="92" y="170" font-size="18" font-weight="700" fill="#302a38">博客 · Bangumi · X</text>
+    <text x="92" y="193" font-size="13" fill="#746d7b">单个或多个订阅地址</text>
+    <rect x="468" y="91" width="264" height="132" rx="23" fill="url(#action)"/>
+    <text x="600" y="137" text-anchor="middle" font-size="19" font-weight="750" fill="#fff">GitHub Actions</text>
+    <text x="600" y="169" text-anchor="middle" font-size="14" fill="#fff">定时读取 · 去重 · 提取图片</text>
+    <text x="600" y="194" text-anchor="middle" font-size="13" fill="#f8f4ff">无需单独服务器</text>
+    <rect x="878" y="102" width="260" height="110" rx="21" fill="#fff" stroke="#e2dfe6"/>
+    <text x="908" y="138" font-size="13" font-weight="700" fill="#6071b7">TELEGRAM</text>
+    <text x="908" y="170" font-size="18" font-weight="700" fill="#302a38">频道或群组</text>
+    <text x="908" y="193" font-size="13" fill="#746d7b">只推送尚未发送的新条目</text>
+  </g>
+  <path d="M338 157 H452" stroke="#918998" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M748 157 H862" stroke="#918998" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="600" y="262" text-anchor="middle" font-family="Inter,Segoe UI,'PingFang SC',sans-serif" font-size="14" font-weight="600" fill="#5a5261">sent_posts.json 记录已推送内容，避免重复发送</text>
+</svg>
