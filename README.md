@@ -1,6 +1,16 @@
 # RSS 到 Telegram 推送工具
 
-这个仓库通过 GitHub Actions 定时读取一个或多个 RSS 源，并把新条目推送到 Telegram 频道或群组。
+**不用单独养服务器，让 GitHub Actions 定时把 RSS 新内容推送到 Telegram。**
+
+支持多个订阅源、图片、独立提示文字和自动去重。
+
+![多个 RSS 源经过 GitHub Actions 定时读取和去重，再推送到 Telegram](.github/assets/flow.svg)
+
+## 三步开始
+
+1. Fork 本仓库。
+2. 按下方表格配置 `TELEGRAM_TOKEN`、`CHAT_ID`、`MY_GITHUB_TOKEN`，再填写 `RSS_URL` 或 `RSS_URLS`。
+3. 打开 **Actions → RSS to Telegram → Run workflow** 手动测试；成功后定时任务会自动运行。
 
 ## 功能
 
